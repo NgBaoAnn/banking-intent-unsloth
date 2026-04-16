@@ -1,0 +1,8 @@
+# ============================================================
+# Inference Configuration — Banking Intent Classification
+# ============================================================
+# Đường dẫn tới thư mục checkpoint mô hình đã tinh chỉnh
+model_path: "./outputs/intent-model"
+
+# Chiều dài chuỗi tối đa (phải khớp với giá trị lúc train)
+max_seq_length: 512
