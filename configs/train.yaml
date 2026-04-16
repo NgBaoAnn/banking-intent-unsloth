@@ -1,0 +1,8 @@
+model_name: "unsloth/Qwen2.5-1.5B"
+max_seq_length: 512
+batch_size: 2
+learning_rate: 2.0e-4
+num_train_epochs: 1
+optimizer: "adamw_8bit"
+output_dir: "./outputs/intent-model"
+dataset_path: "./sample_data"
