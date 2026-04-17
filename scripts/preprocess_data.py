@@ -12,45 +12,112 @@ import pandas as pd
 from datasets import load_dataset
 
 
+# ---------------------------------------------------------------------------
+# Text normalization & basic cleaning  (Yêu cầu 2.1)
+# ---------------------------------------------------------------------------
 def normalize_text(text: str) -> str:
     """Chuẩn hóa văn bản: lowercase, loại bỏ ký tự thừa, chuẩn hóa khoảng trắng."""
     text = text.strip()
     text = text.lower()
+    # Loại bỏ ký tự đặc biệt không cần thiết (giữ lại chữ, số, dấu câu cơ bản)
     text = re.sub(r"[^\w\s\.\,\?\!\'\-]", "", text)
+    # Chuẩn hóa nhiều dấu cách thành 1
     text = re.sub(r"\s+", " ", text)
     return text
 
 
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="Tiền xử lý dữ liệu BANKING77")
-    parser.add_argument("--samples_per_class_train", type=int, default=20)
-    parser.add_argument("--samples_per_class_test", type=int, default=5)
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--samples_per_class_train", type=int, default=20,
+        help="Số mẫu mỗi lớp cho tập train (mặc định: 20)"
+    )
+    parser.add_argument(
+        "--samples_per_class_test", type=int, default=5,
+        help="Số mẫu mỗi lớp cho tập test (mặc định: 5)"
+    )
+    parser.add_argument(
+        "--output_dir", type=str, default="sample_data",
+        help="Thư mục lưu kết quả (mặc định: sample_data)"
+    )
+    parser.add_argument(
+        "--seed", type=int, default=42,
+        help="Random seed cho reproducibility (mặc định: 42)"
+    )
     args = parser.parse_args()
 
-    print("Loading BANKING77 dataset...")
+    print("=" * 60)
+    print("  BANKING77 — Tiền xử lý dữ liệu")
+    print("=" * 60)
+
+    # 1. Tải dataset -----------------------------------------------------------
+    print("\n[1/4] Đang tải tập dữ liệu mteb/banking77 từ HuggingFace...")
     dataset = load_dataset("mteb/banking77")
 
-    df_train = dataset["train"].to_pandas()
-    df_test = dataset["test"].to_pandas()
+    df_train_full = dataset["train"].to_pandas()
+    df_test_full = dataset["test"].to_pandas()
+    print(f"  → Tập train gốc : {len(df_train_full)} mẫu")
+    print(f"  → Tập test  gốc : {len(df_test_full)} mẫu")
+    print(f"  → Số lớp (labels): {df_train_full['label_text'].nunique()}")
 
-    # Stratified sampling
+    # 2. Sampling --------------------------------------------------------------
+    print(f"\n[2/4] Trích xuất mẫu: {args.samples_per_class_train}/class (train), "
+          f"{args.samples_per_class_test}/class (test)...")
+
     sample_train = (
-        df_train.groupby("label_text", group_keys=False)
-        .apply(lambda x: x.sample(min(len(x), args.samples_per_class_train), random_state=args.seed))
+        df_train_full
+        .groupby("label_text", group_keys=False)
+        .apply(lambda x: x.sample(min(len(x), args.samples_per_class_train),
+                                   random_state=args.seed))
         .reset_index(drop=True)
     )
     sample_test = (
-        df_test.groupby("label_text", group_keys=False)
-        .apply(lambda x: x.sample(min(len(x), args.samples_per_class_test), random_state=args.seed))
+        df_test_full
+        .groupby("label_text", group_keys=False)
+        .apply(lambda x: x.sample(min(len(x), args.samples_per_class_test),
+                                   random_state=args.seed))
         .reset_index(drop=True)
     )
+    print(f"  → Tập train sau sampling: {len(sample_train)} mẫu")
+    print(f"  → Tập test  sau sampling: {len(sample_test)} mẫu")
 
-    # Text normalization
+    # 3. Text normalization ----------------------------------------------------
+    print("\n[3/4] Chuẩn hóa văn bản...")
     sample_train["text"] = sample_train["text"].apply(normalize_text)
     sample_test["text"] = sample_test["text"].apply(normalize_text)
 
-    print(f"Sampled train: {len(sample_train)}, test: {len(sample_test)}")
+    # Tạo label mapping (label_text → label_id)
+    all_labels = sorted(
+        set(sample_train["label_text"].unique()) | set(sample_test["label_text"].unique())
+    )
+    label2id = {label: idx for idx, label in enumerate(all_labels)}
+    sample_train["label_id"] = sample_train["label_text"].map(label2id)
+    sample_test["label_id"] = sample_test["label_text"].map(label2id)
+
+    # 4. Lưu file (CHỈ lưu text + label, KHÔNG lưu formatted prompt) ----------
+    # Prompt sẽ được format trực tiếp trong train.py với EOS token chính xác
+    print(f"\n[4/4] Lưu kết quả vào thư mục '{args.output_dir}'...")
+    os.makedirs(args.output_dir, exist_ok=True)
+
+    cols_to_save = ["text", "label", "label_text", "label_id"]
+    sample_train[cols_to_save].to_csv(
+        os.path.join(args.output_dir, "train.csv"), index=False
+    )
+    sample_test[cols_to_save].to_csv(
+        os.path.join(args.output_dir, "test.csv"), index=False
+    )
+
+    # Lưu label mapping
+    label_map_df = pd.DataFrame(list(label2id.items()), columns=["label_text", "label_id"])
+    label_map_df.to_csv(os.path.join(args.output_dir, "label_map.csv"), index=False)
+
+    print(f"  ✓ train.csv     : {len(sample_train)} mẫu")
+    print(f"  ✓ test.csv      : {len(sample_test)} mẫu")
+    print(f"  ✓ label_map.csv : {len(label2id)} nhãn")
+    print("\nHoàn tất tiền xử lý dữ liệu!")
 
 
 if __name__ == "__main__":
