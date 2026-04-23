@@ -152,8 +152,9 @@ def main():
     )
 
     # --- Load dataset & format prompts ----------------------------------------
-    print("[3/5] Nạp dữ liệu huấn luyện...")
+    print("[3/5] Nạp dữ liệu huấn luyện và xác thực (validation)...")
     train_df = pd.read_csv(f"{dataset_path}/train.csv")
+    valid_df = pd.read_csv(f"{dataset_path}/valid.csv")
 
     # Format prompt trực tiếp với EOS token thật từ tokenizer (không dùng placeholder)
     eos = tokenizer.eos_token or ""
@@ -165,9 +166,18 @@ def main():
         ),
         axis=1,
     )
+    valid_df["formatted_text"] = valid_df.apply(
+        lambda row: format_prompt(
+            text=row["text"],
+            label=row["label_text"],
+            eos_token=eos,
+        ),
+        axis=1,
+    )
 
     dataset = Dataset.from_pandas(train_df[["formatted_text"]])
-    print(f"  → Số mẫu train: {len(dataset)}")
+    eval_dataset = Dataset.from_pandas(valid_df[["formatted_text"]])
+    print(f"  → Số mẫu train: {len(dataset)}, Số mẫu valid: {len(eval_dataset)}")
 
     # --- SFTTrainer -----------------------------------------------------------
     print("[4/5] Bắt đầu huấn luyện...\n")
@@ -175,6 +185,7 @@ def main():
         model=model,
         tokenizer=tokenizer,
         train_dataset=dataset,
+        eval_dataset=eval_dataset, # Sử dụng tập validation
         dataset_text_field="formatted_text",
         max_seq_length=max_seq_length,
         dataset_num_proc=2,
@@ -188,6 +199,8 @@ def main():
             fp16=not torch.cuda.is_bf16_supported(),
             bf16=torch.cuda.is_bf16_supported(),
             logging_steps=10,
+            evaluation_strategy="steps", # Đánh giá sau mỗi `eval_steps`
+            eval_steps=20, # Tùy chỉnh step đánh giá
             optim=config.get("optimizer", "adamw_8bit"),
             weight_decay=config.get("weight_decay", 0.01),
             lr_scheduler_type=config.get("lr_scheduler_type", "linear"),

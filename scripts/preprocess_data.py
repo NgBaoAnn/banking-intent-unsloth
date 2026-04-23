@@ -32,12 +32,16 @@ def normalize_text(text: str) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Tiền xử lý dữ liệu BANKING77")
     parser.add_argument(
-        "--samples_per_class_train", type=int, default=20,
-        help="Số mẫu mỗi lớp cho tập train (mặc định: 20)"
+        "--samples_per_class_train", type=int, default=30,
+        help="Số mẫu mỗi lớp cho tập train (mặc định: 30)"
     )
     parser.add_argument(
-        "--samples_per_class_test", type=int, default=5,
-        help="Số mẫu mỗi lớp cho tập test (mặc định: 5)"
+        "--samples_per_class_valid", type=int, default=10,
+        help="Số mẫu mỗi lớp cho tập validation (mặc định: 10)"
+    )
+    parser.add_argument(
+        "--samples_per_class_test", type=int, default=15,
+        help="Số mẫu mỗi lớp cho tập test (mặc định: 15)"
     )
     parser.add_argument(
         "--output_dir", type=str, default="sample_data",
@@ -65,15 +69,29 @@ def main():
 
     # 2. Sampling --------------------------------------------------------------
     print(f"\n[2/4] Trích xuất mẫu: {args.samples_per_class_train}/class (train), "
+          f"{args.samples_per_class_valid}/class (valid), "
           f"{args.samples_per_class_test}/class (test)...")
 
-    sample_train = (
-        df_train_full
-        .groupby("label_text", group_keys=False)
-        .apply(lambda x: x.sample(min(len(x), args.samples_per_class_train),
-                                   random_state=args.seed))
-        .reset_index(drop=True)
-    )
+    # Lấy mẫu từ tập train gốc cho cả Train và Valid
+    def split_train_valid(x):
+        total_needed = args.samples_per_class_train + args.samples_per_class_valid
+        # Lấy đủ mẫu nếu có, hoặc lấy vửa đủ
+        sampled = x.sample(min(len(x), total_needed), random_state=args.seed)
+        
+        valid_size = min(len(sampled), args.samples_per_class_valid)
+        train_size = len(sampled) - valid_size
+        
+        valid_set = sampled.iloc[:valid_size]
+        train_set = sampled.iloc[valid_size:]
+        return train_set, valid_set
+
+    train_valid_splits = df_train_full.groupby("label_text", group_keys=False).apply(split_train_valid)
+    
+    # Kết hợp lại các tập đã split
+    sample_train = pd.concat([res[0] for res in train_valid_splits]).reset_index(drop=True)
+    sample_valid = pd.concat([res[1] for res in train_valid_splits]).reset_index(drop=True)
+
+    # Lấy mẫu test
     sample_test = (
         df_test_full
         .groupby("label_text", group_keys=False)
@@ -81,12 +99,15 @@ def main():
                                    random_state=args.seed))
         .reset_index(drop=True)
     )
+    
     print(f"  → Tập train sau sampling: {len(sample_train)} mẫu")
+    print(f"  → Tập valid sau sampling: {len(sample_valid)} mẫu")
     print(f"  → Tập test  sau sampling: {len(sample_test)} mẫu")
 
     # 3. Text normalization ----------------------------------------------------
     print("\n[3/4] Chuẩn hóa văn bản...")
     sample_train["text"] = sample_train["text"].apply(normalize_text)
+    sample_valid["text"] = sample_valid["text"].apply(normalize_text)
     sample_test["text"] = sample_test["text"].apply(normalize_text)
 
     # Tạo label mapping (label_text → label_id)
@@ -95,6 +116,7 @@ def main():
     )
     label2id = {label: idx for idx, label in enumerate(all_labels)}
     sample_train["label_id"] = sample_train["label_text"].map(label2id)
+    sample_valid["label_id"] = sample_valid["label_text"].map(label2id)
     sample_test["label_id"] = sample_test["label_text"].map(label2id)
 
     # 4. Lưu file (CHỈ lưu text + label, KHÔNG lưu formatted prompt) ----------
@@ -106,6 +128,9 @@ def main():
     sample_train[cols_to_save].to_csv(
         os.path.join(args.output_dir, "train.csv"), index=False
     )
+    sample_valid[cols_to_save].to_csv(
+        os.path.join(args.output_dir, "valid.csv"), index=False
+    )
     sample_test[cols_to_save].to_csv(
         os.path.join(args.output_dir, "test.csv"), index=False
     )
@@ -115,6 +140,7 @@ def main():
     label_map_df.to_csv(os.path.join(args.output_dir, "label_map.csv"), index=False)
 
     print(f"  ✓ train.csv     : {len(sample_train)} mẫu")
+    print(f"  ✓ valid.csv     : {len(sample_valid)} mẫu")
     print(f"  ✓ test.csv      : {len(sample_test)} mẫu")
     print(f"  ✓ label_map.csv : {len(label2id)} nhãn")
     print("\nHoàn tất tiền xử lý dữ liệu!")
