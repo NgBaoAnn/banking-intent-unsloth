@@ -13,7 +13,7 @@ Tập dữ liệu: [`mteb/banking77`](https://huggingface.co/datasets/mteb/banki
 ### Cài đặt
 
 ```bash
-git clone <YOUR_REPO_URL>
+git clone https://github.com/NgBaoAnn/banking-intent-unsloth.git
 cd banking-intent-unsloth
 pip install -r requirements.txt
 ```
