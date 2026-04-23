@@ -181,14 +181,18 @@ def main():
 
     # --- SFTTrainer -----------------------------------------------------------
     print("[4/5] Bắt đầu huấn luyện...\n")
+
+    def formatting_func(examples):
+        """Trả về danh sách chuỗi đã format sẵn cho SFTTrainer."""
+        return examples["formatted_text"]
+
     trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
         train_dataset=dataset,
-        eval_dataset=eval_dataset, # Sử dụng tập validation
-        dataset_text_field="formatted_text",
+        eval_dataset=eval_dataset,
+        formatting_func=formatting_func,
         max_seq_length=max_seq_length,
-        dataset_num_proc=2,
         packing=False,
         args=TrainingArguments(
             per_device_train_batch_size=config.get("batch_size", 2),
