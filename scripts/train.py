@@ -199,7 +199,7 @@ def main():
             fp16=not torch.cuda.is_bf16_supported(),
             bf16=torch.cuda.is_bf16_supported(),
             logging_steps=10,
-            evaluation_strategy="steps", # Đánh giá sau mỗi `eval_steps`
+            eval_strategy="steps",       # Đánh giá sau mỗi `eval_steps`
             eval_steps=20, # Tùy chỉnh step đánh giá
             optim=config.get("optimizer", "adamw_8bit"),
             weight_decay=config.get("weight_decay", 0.01),
