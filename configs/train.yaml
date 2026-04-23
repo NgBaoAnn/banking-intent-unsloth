@@ -9,23 +9,18 @@ max_seq_length: 512
 dataset_path: "./sample_data"
 
 # LoRA / PEFT
-lora_r: 32
-lora_alpha: 32
+lora_r: 64
+lora_alpha: 64
 
-# Training hyperparameters  (Yêu cầu 2.2 — ghi rõ tất cả)
+# Training hyperparameters
 batch_size: 2
 gradient_accumulation_steps: 4
-learning_rate: 1.0e-4
-num_train_epochs: 5
+learning_rate: 5.0e-5
+num_train_epochs: 8
 optimizer: "adamw_8bit"
-warmup_steps: 20
+warmup_steps: 30
 weight_decay: 0.01
 lr_scheduler_type: "cosine"
-
-# Regularization / Augmentation
-# - LoRA dropout = 0 (tối ưu bởi Unsloth)
-# - Weight decay = 0.01 (L2 regularization)
-# - Gradient checkpointing = "unsloth" (tiết kiệm VRAM)
 
 # Output
 output_dir: "./outputs/intent-model"

@@ -32,16 +32,16 @@ def normalize_text(text: str) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Tiền xử lý dữ liệu BANKING77")
     parser.add_argument(
-        "--samples_per_class_train", type=int, default=30,
-        help="Số mẫu mỗi lớp cho tập train (mặc định: 30)"
+        "--samples_per_class_train", type=int, default=80,
+        help="Số mẫu mỗi lớp cho tập train (mặc định: 80)"
     )
     parser.add_argument(
         "--samples_per_class_valid", type=int, default=10,
         help="Số mẫu mỗi lớp cho tập validation (mặc định: 10)"
     )
     parser.add_argument(
-        "--samples_per_class_test", type=int, default=15,
-        help="Số mẫu mỗi lớp cho tập test (mặc định: 15)"
+        "--samples_per_class_test", type=int, default=30,
+        help="Số mẫu mỗi lớp cho tập test (mặc định: 30)"
     )
     parser.add_argument(
         "--output_dir", type=str, default="sample_data",
