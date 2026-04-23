@@ -191,12 +191,17 @@ def main():
             return [texts]
         return list(texts)
 
+    from transformers import DataCollatorForLanguageModeling
+
+    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+
     trainer = SFTTrainer(
         model=model,
         processing_class=tokenizer,
         train_dataset=dataset,
         eval_dataset=eval_dataset,
         formatting_func=formatting_func,
+        data_collator=data_collator,
         args=SFTConfig(
             max_seq_length=max_seq_length,
             packing=False,
@@ -216,6 +221,8 @@ def main():
             seed=3407,
             output_dir="outputs",
             report_to="none",
+            # Bắt buộc để tránh lỗi 'int object has no attribute mean' trên Unsloth + Transformers 5.x
+            average_tokens_across_devices=False,
         ),
     )
 
