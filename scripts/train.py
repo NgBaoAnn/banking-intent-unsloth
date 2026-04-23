@@ -184,7 +184,10 @@ def main():
 
     def formatting_func(examples):
         """Trả về danh sách chuỗi đã format sẵn cho SFTTrainer."""
-        return examples["formatted_text"]
+        texts = examples["formatted_text"]
+        if isinstance(texts, str):
+            return [texts]
+        return list(texts)
 
     trainer = SFTTrainer(
         model=model,
