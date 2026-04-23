@@ -13,8 +13,7 @@ import pandas as pd
 from datasets import Dataset
 from unsloth import FastLanguageModel
 import torch
-from trl import SFTTrainer
-from transformers import TrainingArguments
+from trl import SFTTrainer, SFTConfig
 from sklearn.metrics import classification_report, accuracy_score
 
 from utils import format_prompt
@@ -131,6 +130,9 @@ def main():
         load_in_4bit=True,
     )
 
+    # Fix: đảm bảo model trả về dict (tránh lỗi 'int has no attribute mean')
+    model.config.return_dict = True
+
     # Đảm bảo tokenizer có pad_token
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -191,13 +193,13 @@ def main():
 
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         train_dataset=dataset,
         eval_dataset=eval_dataset,
         formatting_func=formatting_func,
-        max_seq_length=max_seq_length,
-        packing=False,
-        args=TrainingArguments(
+        args=SFTConfig(
+            max_seq_length=max_seq_length,
+            packing=False,
             per_device_train_batch_size=config.get("batch_size", 2),
             gradient_accumulation_steps=config.get("gradient_accumulation_steps", 4),
             warmup_steps=config.get("warmup_steps", 10),
@@ -206,8 +208,8 @@ def main():
             fp16=not torch.cuda.is_bf16_supported(),
             bf16=torch.cuda.is_bf16_supported(),
             logging_steps=10,
-            eval_strategy="steps",       # Đánh giá sau mỗi `eval_steps`
-            eval_steps=20, # Tùy chỉnh step đánh giá
+            eval_strategy="steps",
+            eval_steps=20,
             optim=config.get("optimizer", "adamw_8bit"),
             weight_decay=config.get("weight_decay", 0.01),
             lr_scheduler_type=config.get("lr_scheduler_type", "linear"),
