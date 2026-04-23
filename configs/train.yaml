@@ -2,25 +2,25 @@
 # Training Configuration — Banking Intent Classification
 # ============================================================
 # Mô hình & kiến trúc
-model_name: "unsloth/Qwen2.5-1.5B"
+model_name: "unsloth/Qwen2.5-7B"
 max_seq_length: 512
 
 # Dataset
 dataset_path: "./sample_data"
 
 # LoRA / PEFT
-lora_r: 16
-lora_alpha: 16
+lora_r: 32
+lora_alpha: 32
 
 # Training hyperparameters  (Yêu cầu 2.2 — ghi rõ tất cả)
 batch_size: 2
 gradient_accumulation_steps: 4
-learning_rate: 2.0e-4
-num_train_epochs: 3
+learning_rate: 1.0e-4
+num_train_epochs: 5
 optimizer: "adamw_8bit"
-warmup_steps: 10
+warmup_steps: 20
 weight_decay: 0.01
-lr_scheduler_type: "linear"
+lr_scheduler_type: "cosine"
 
 # Regularization / Augmentation
 # - LoRA dropout = 0 (tối ưu bởi Unsloth)
