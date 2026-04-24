@@ -1,5 +1,18 @@
-# Chỉ cài những thư viện Unsloth thực sự cần (tránh xung đột bản có sẵn của Kaggle)
---no-deps xformers trl peft accelerate bitsandbytes triton
+# Core Dependencies
+torch
+transformers>=4.45.0
+trl>=0.11.0
+peft
+accelerate
+bitsandbytes
+xformers
+triton
+
+# Unsloth (Bản tối ưu cho Kaggle)
 unsloth[kaggle-new] @ git+https://github.com/unslothai/unsloth.git
+
+# Utilities
 pyyaml
+pandas
 datasets
+scikit-learn
