@@ -1,14 +1,15 @@
-# Core ML framework
+# Core Dependencies
 torch
-transformers
-
-# Unsloth — tối ưu fine-tuning trên GPU
-unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git
+transformers>=4.45.0
+trl>=0.11.0
+peft
+accelerate
+bitsandbytes
 xformers
 triton
 
-# Hugging Face SFTTrainer
-trl
+# Unsloth (Bản tối ưu cho Kaggle)
+unsloth[kaggle-new] @ git+https://github.com/unslothai/unsloth.git
 
 # Utilities
 pyyaml
