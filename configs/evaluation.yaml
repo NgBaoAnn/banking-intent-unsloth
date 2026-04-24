@@ -1,0 +1,20 @@
+# ============================================================
+# Evaluation Configuration — Banking Intent Classification
+# ============================================================
+
+# Đường dẫn tới tập dữ liệu kiểm thử
+test_dataset: "./sample_data/test.csv"
+
+# Cấu hình kết quả đầu ra
+output:
+  results_file: "evaluation_results.txt"
+  save_detailed_predictions: true
+
+# Các chỉ số đánh giá
+metrics:
+  - accuracy
+  - classification_report
+
+# Ngưỡng tin cậy (Confidence Threshold)
+# Dự phòng cho tính năng lọc các dự đoán không chắc chắn
+confidence_threshold: 0.5

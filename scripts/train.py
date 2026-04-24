@@ -22,10 +22,13 @@ from utils import format_prompt
 # ---------------------------------------------------------------------------
 # Evaluation on test set  (Yêu cầu 1: "Đánh giá hiệu suất trên tập test")
 # ---------------------------------------------------------------------------
-def evaluate_on_test(model, tokenizer, test_csv_path: str, output_dir: str):
+def evaluate_on_test(model, tokenizer, eval_config: dict, output_dir: str):
     """Chạy inference trên tập test, in accuracy + classification report."""
+    test_csv_path = eval_config.get("test_dataset", "./sample_data/test.csv")
+    results_filename = eval_config.get("output", {}).get("results_file", "evaluation_results.txt")
+
     print("\n" + "=" * 60)
-    print("  ĐÁNH GIÁ MÔ HÌNH TRÊN TẬP TEST")
+    print(f"  ĐÁNH GIÁ MÔ HÌNH TRÊN: {test_csv_path}")
     print("=" * 60)
 
     FastLanguageModel.for_inference(model)
@@ -86,7 +89,7 @@ def evaluate_on_test(model, tokenizer, test_csv_path: str, output_dir: str):
 
     # --- Lưu kết quả ra file ---
     os.makedirs(output_dir, exist_ok=True)
-    result_path = os.path.join(output_dir, "evaluation_results.txt")
+    result_path = os.path.join(output_dir, results_filename)
     with open(result_path, "w", encoding="utf-8") as f:
         f.write(f"Accuracy: {acc:.4f}\n\n")
         f.write("Classification Report:\n")
@@ -102,6 +105,7 @@ def evaluate_on_test(model, tokenizer, test_csv_path: str, output_dir: str):
 def main():
     parser = argparse.ArgumentParser(description="Fine-tune model với Unsloth")
     parser.add_argument("--config", type=str, required=True, help="Path to training config YAML")
+    parser.add_argument("--eval_config", type=str, default=None, help="Path to evaluation config YAML")
     args = parser.parse_args()
 
     # --- Load config ----------------------------------------------------------
@@ -112,6 +116,13 @@ def main():
     max_seq_length = config.get("max_seq_length", 512)
     dataset_path = config.get("dataset_path", "./sample_data")
     output_dir = config.get("output_dir", "./outputs/intent-model")
+
+    # --- Load eval config -----------------------------------------------------
+    eval_config = {}
+    if args.eval_config:
+        print(f"  → Loading evaluation config from: {args.eval_config}")
+        with open(args.eval_config, "r") as f:
+            eval_config = yaml.safe_load(f)
 
     # --- Print hyperparameters (Yêu cầu 2.2: ghi tài liệu rõ ràng) ----------
     print("=" * 60)
@@ -234,8 +245,7 @@ def main():
     tokenizer.save_pretrained(output_dir)
 
     # --- Evaluate  (Yêu cầu 1: đánh giá trên tập test) -----------------------
-    test_csv = f"{dataset_path}/test.csv"
-    evaluate_on_test(model, tokenizer, test_csv, output_dir)
+    evaluate_on_test(model, tokenizer, eval_config, output_dir)
 
     print("\n✓ Pipeline hoàn tất!")
 
