@@ -15,10 +15,10 @@ lora_alpha: 64
 # Training hyperparameters
 batch_size: 2
 gradient_accumulation_steps: 4
-learning_rate: 5.0e-5
-num_train_epochs: 8
+learning_rate: 1.0e-4
+num_train_epochs: 3
 optimizer: "adamw_8bit"
-warmup_steps: 30
+warmup_steps: 15
 weight_decay: 0.01
 lr_scheduler_type: "cosine"
 
