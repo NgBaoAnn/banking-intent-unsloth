@@ -1,11 +1,3 @@
-"""
-train.py
---------
-Fine-tune mô hình ngôn ngữ (Qwen2.5 / LLaMA3) bằng Unsloth + LoRA (PEFT)
-cho bài toán phân loại ý định ngân hàng (Banking Intent Classification).
-Sau khi huấn luyện, đánh giá accuracy + classification report trên tập test.
-"""
-
 import os
 import yaml
 import argparse
@@ -19,26 +11,22 @@ from sklearn.metrics import classification_report, accuracy_score
 from utils import format_prompt
 
 
-# ---------------------------------------------------------------------------
-# Evaluation on test set  (Yêu cầu 1: "Đánh giá hiệu suất trên tập test")
-# ---------------------------------------------------------------------------
 def evaluate_on_test(model, tokenizer, eval_config: dict, output_dir: str):
-    """Chạy inference trên tập test, in accuracy + classification report."""
+    """Run inference on test set, print accuracy + classification report."""
     test_csv_path = eval_config.get("test_dataset", "./sample_data/test.csv")
     results_filename = eval_config.get("output", {}).get("results_file", "evaluation_results.txt")
 
     print("\n" + "=" * 60)
-    print(f"  ĐÁNH GIÁ MÔ HÌNH TRÊN: {test_csv_path}")
+    print(f"  EVALUATING ON: {test_csv_path}")
     print("=" * 60)
 
     FastLanguageModel.for_inference(model)
     test_df = pd.read_csv(test_csv_path)
 
-    y_true = []
-    y_pred = []
+    y_true, y_pred = [], []
 
     for idx, row in test_df.iterrows():
-        prompt = format_prompt(text=row["text"])  # Không có label → inference mode
+        prompt = format_prompt(text=row["text"])
         inputs = tokenizer([prompt], return_tensors="pt").to("cuda")
 
         with torch.no_grad():
@@ -59,56 +47,42 @@ def evaluate_on_test(model, tokenizer, eval_config: dict, output_dir: str):
         y_true.append(expected)
         y_pred.append(predicted)
 
-        # In một vài ví dụ đầu
         if idx < 5:
             status = "✓" if predicted == expected else "✗"
             print(f"  [{status}] Input : {row['text'][:80]}...")
             print(f"       Expected : {expected}")
             print(f"       Predicted: {predicted}\n")
 
-        # Progress
         if (idx + 1) % 50 == 0:
-            print(f"  ... đã đánh giá {idx + 1}/{len(test_df)} mẫu")
+            print(f"  ... evaluated {idx + 1}/{len(test_df)} samples")
 
-    # --- Metrics ---
     acc = accuracy_score(y_true, y_pred)
     print("\n" + "-" * 60)
     print(f"  ACCURACY: {acc:.4f} ({sum(1 for a, b in zip(y_true, y_pred) if a == b)}/{len(y_true)})")
     print("-" * 60)
 
-    # Classification report (precision, recall, F1 mỗi class)
-    # Chỉ report các label thực sự xuất hiện trong predictions
     unique_labels = sorted(set(y_true) | set(y_pred))
-    report = classification_report(
-        y_true, y_pred,
-        labels=unique_labels,
-        zero_division=0
-    )
+    report = classification_report(y_true, y_pred, labels=unique_labels, zero_division=0)
     print("\n  CLASSIFICATION REPORT:")
     print(report)
 
-    # --- Lưu kết quả ra file ---
     os.makedirs(output_dir, exist_ok=True)
     result_path = os.path.join(output_dir, results_filename)
     with open(result_path, "w", encoding="utf-8") as f:
         f.write(f"Accuracy: {acc:.4f}\n\n")
         f.write("Classification Report:\n")
         f.write(report)
-    print(f"  → Kết quả đã lưu tại: {result_path}")
+    print(f"  → Results saved to: {result_path}")
 
     return acc
 
 
-# ---------------------------------------------------------------------------
-# Main training pipeline
-# ---------------------------------------------------------------------------
 def main():
-    parser = argparse.ArgumentParser(description="Fine-tune model với Unsloth")
+    parser = argparse.ArgumentParser(description="Fine-tune with Unsloth")
     parser.add_argument("--config", type=str, required=True, help="Path to training config YAML")
     parser.add_argument("--eval_config", type=str, default=None, help="Path to evaluation config YAML")
     args = parser.parse_args()
 
-    # --- Load config ----------------------------------------------------------
     with open(args.config, "r") as f:
         config = yaml.safe_load(f)
 
@@ -117,14 +91,11 @@ def main():
     dataset_path = config.get("dataset_path", "./sample_data")
     output_dir = config.get("output_dir", "./outputs/intent-model")
 
-    # --- Load eval config -----------------------------------------------------
     eval_config = {}
     if args.eval_config:
-        print(f"  → Loading evaluation config from: {args.eval_config}")
         with open(args.eval_config, "r") as f:
             eval_config = yaml.safe_load(f)
 
-    # --- Print hyperparameters (Yêu cầu 2.2: ghi tài liệu rõ ràng) ----------
     print("=" * 60)
     print("  HYPERPARAMETERS")
     print("=" * 60)
@@ -132,31 +103,25 @@ def main():
         print(f"  {key:<30s}: {value}")
     print("=" * 60)
 
-    # --- Load model -----------------------------------------------------------
-    print(f"\n[1/5] Đang tải mô hình: {model_name}...")
+    print(f"\n[1/5] Loading model: {model_name}...")
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=model_name,
         max_seq_length=max_seq_length,
-        dtype=None,       # Auto detect: Float16 cho T4/V100, BFloat16 cho Ampere+
+        dtype=None,  # Auto: Float16 for T4/V100, BFloat16 for Ampere+
         load_in_4bit=True,
     )
 
-    # Fix: đảm bảo model trả về dict (tránh lỗi 'int has no attribute mean')
     model.config.return_dict = True
 
-    # Đảm bảo tokenizer có pad_token
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    # --- Apply LoRA adapter ---------------------------------------------------
-    print("[2/5] Cấu hình LoRA adapter...")
+    print("[2/5] Configuring LoRA adapter...")
     model = FastLanguageModel.get_peft_model(
         model,
         r=config.get("lora_r", 16),
-        target_modules=[
-            "q_proj", "k_proj", "v_proj", "o_proj",
-            "gate_proj", "up_proj", "down_proj",
-        ],
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                        "gate_proj", "up_proj", "down_proj"],
         lora_alpha=config.get("lora_alpha", 16),
         lora_dropout=0,
         bias="none",
@@ -164,46 +129,29 @@ def main():
         random_state=3407,
     )
 
-    # --- Load dataset & format prompts ----------------------------------------
-    print("[3/5] Nạp dữ liệu huấn luyện và xác thực (validation)...")
+    print("[3/5] Loading datasets...")
     train_df = pd.read_csv(f"{dataset_path}/train.csv")
     valid_df = pd.read_csv(f"{dataset_path}/valid.csv")
 
-    # Format prompt trực tiếp với EOS token thật từ tokenizer (không dùng placeholder)
     eos = tokenizer.eos_token or ""
     train_df["formatted_text"] = train_df.apply(
-        lambda row: format_prompt(
-            text=row["text"],
-            label=row["label_text"],
-            eos_token=eos,
-        ),
-        axis=1,
+        lambda row: format_prompt(text=row["text"], label=row["label_text"], eos_token=eos), axis=1
     )
     valid_df["formatted_text"] = valid_df.apply(
-        lambda row: format_prompt(
-            text=row["text"],
-            label=row["label_text"],
-            eos_token=eos,
-        ),
-        axis=1,
+        lambda row: format_prompt(text=row["text"], label=row["label_text"], eos_token=eos), axis=1
     )
 
     dataset = Dataset.from_pandas(train_df[["formatted_text"]])
     eval_dataset = Dataset.from_pandas(valid_df[["formatted_text"]])
-    print(f"  → Số mẫu train: {len(dataset)}, Số mẫu valid: {len(eval_dataset)}")
+    print(f"  → Train: {len(dataset)} samples, Valid: {len(eval_dataset)} samples")
 
-    # --- SFTTrainer -----------------------------------------------------------
-    print("[4/5] Bắt đầu huấn luyện...\n")
+    print("[4/5] Training...\n")
 
     def formatting_func(examples):
-        """Trả về danh sách chuỗi đã format sẵn cho SFTTrainer."""
         texts = examples["formatted_text"]
-        if isinstance(texts, str):
-            return [texts]
-        return list(texts)
+        return [texts] if isinstance(texts, str) else list(texts)
 
     from transformers import DataCollatorForLanguageModeling
-
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
     trainer = SFTTrainer(
@@ -232,22 +180,20 @@ def main():
             seed=3407,
             output_dir="outputs",
             report_to="none",
-            # Bắt buộc để tránh lỗi 'int object has no attribute mean' trên Unsloth + Transformers 5.x
+            # Required to avoid 'int has no attribute mean' on Unsloth + Transformers 5.x
             average_tokens_across_devices=False,
         ),
     )
 
     trainer.train()
 
-    # --- Save checkpoint  (Yêu cầu 2.2) --------------------------------------
-    print(f"\n[5/5] Huấn luyện hoàn tất! Lưu checkpoint → {output_dir}")
+    print(f"\n[5/5] Training complete! Saving checkpoint → {output_dir}")
     model.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
 
-    # --- Evaluate  (Yêu cầu 1: đánh giá trên tập test) -----------------------
     evaluate_on_test(model, tokenizer, eval_config, output_dir)
 
-    print("\n✓ Pipeline hoàn tất!")
+    print("\n✓ Pipeline complete!")
 
 
 if __name__ == "__main__":
