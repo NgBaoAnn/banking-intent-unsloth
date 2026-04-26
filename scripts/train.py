@@ -12,7 +12,6 @@ from utils import format_prompt
 
 
 def evaluate_on_test(model, tokenizer, eval_config: dict, output_dir: str):
-    """Run inference on test set, print accuracy + classification report."""
     test_csv_path = eval_config.get("test_dataset", "./sample_data/test.csv")
     results_filename = eval_config.get("output", {}).get("results_file", "evaluation_results.txt")
 
@@ -107,7 +106,7 @@ def main():
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=model_name,
         max_seq_length=max_seq_length,
-        dtype=None,  # Auto: Float16 for T4/V100, BFloat16 for Ampere+
+        dtype=None,
         load_in_4bit=True,
     )
 
@@ -180,7 +179,6 @@ def main():
             seed=3407,
             output_dir="outputs",
             report_to="none",
-            # Required to avoid 'int has no attribute mean' on Unsloth + Transformers 5.x
             average_tokens_across_devices=False,
         ),
     )

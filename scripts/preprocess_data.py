@@ -6,7 +6,6 @@ from datasets import load_dataset
 
 
 def normalize_text(text: str) -> str:
-    """Lowercase, remove special characters, normalize whitespace."""
     text = text.strip().lower()
     text = re.sub(r"[^\w\s\.\,\?\!\'\-]", "", text)
     text = re.sub(r"\s+", " ", text)

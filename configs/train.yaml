@@ -1,18 +1,15 @@
-# ============================================================
-# Training Configuration — Banking Intent Classification
-# ============================================================
-# Mô hình & kiến trúc
+
 model_name: "unsloth/Qwen2.5-7B"
 max_seq_length: 512
 
-# Dataset
+
 dataset_path: "./sample_data"
 
-# LoRA / PEFT
+
 lora_r: 64
 lora_alpha: 64
 
-# Training hyperparameters
+
 batch_size: 2
 gradient_accumulation_steps: 4
 learning_rate: 5.0e-5
@@ -22,5 +19,5 @@ warmup_steps: 20
 weight_decay: 0.01
 lr_scheduler_type: "cosine"
 
-# Output
+
 output_dir: "./outputs/intent-model"

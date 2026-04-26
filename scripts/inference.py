@@ -7,13 +7,8 @@ from utils import format_prompt
 
 
 class IntentClassification:
-    """Banking intent classifier using a fine-tuned language model."""
 
     def __init__(self, model_path: str):
-        """
-        Args:
-            model_path: Path to inference config YAML containing 'model_path' key.
-        """
         with open(model_path, "r") as f:
             config = yaml.safe_load(f)
 
@@ -31,7 +26,6 @@ class IntentClassification:
         FastLanguageModel.for_inference(self.model)
 
     def __call__(self, message: str) -> str:
-        """Predict intent label for a given banking message."""
         prompt = format_prompt(text=message)
 
         inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
@@ -44,7 +38,6 @@ class IntentClassification:
                 pad_token_id=self.tokenizer.eos_token_id,
             )
 
-        # Decode only the newly generated tokens (exclude prompt)
         input_length = inputs["input_ids"].shape[1]
         decoded = self.tokenizer.batch_decode(
             outputs[:, input_length:], skip_special_tokens=True

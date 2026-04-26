@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-set -e  # Dừng lại ngay nếu có lỗi
+set -e
 
-# Nếu có đối số dòng lệnh → chạy 1 câu duy nhất
-# Nếu không có → chạy chế độ demo nhiều ví dụ
 INPUT_TEXT="${1:-}"
 
 echo "============================================================"
