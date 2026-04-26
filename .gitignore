@@ -28,3 +28,7 @@ sample_data/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Model Caches
+huggingface_tokenizers_cache/
+unsloth_compiled_cache/
