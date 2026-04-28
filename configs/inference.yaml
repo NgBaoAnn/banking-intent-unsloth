@@ -1,5 +1,4 @@
-
-model_path: "./outputs/intent-model"
+model_path: "/kaggle/input/nlp_lab2_banking77/banking-intent-unsloth/outputs/intent-model"
 
 
 max_seq_length: 512
