@@ -12,8 +12,8 @@ class IntentClassification:
         with open(model_path, "r") as f:
             config = yaml.safe_load(f)
 
-        real_model_path = config.get("model_path", "./outputs/intent-model")
-        max_seq_length = config.get("max_seq_length", 512)
+        real_model_path = config["model_path"]
+        max_seq_length = config["max_seq_length"]
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
