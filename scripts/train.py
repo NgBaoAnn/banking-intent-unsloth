@@ -85,10 +85,10 @@ def main():
     with open(args.config, "r") as f:
         config = yaml.safe_load(f)
 
-    model_name = config.get("model_name", "unsloth/Qwen2.5-1.5B")
-    max_seq_length = config.get("max_seq_length", 512)
-    dataset_path = config.get("dataset_path", "./sample_data")
-    output_dir = config.get("output_dir", "./outputs/intent-model")
+    model_name = config["model_name"]
+    max_seq_length = config["max_seq_length"]
+    dataset_path = config["dataset_path"]
+    output_dir = config["output_dir"]
 
     eval_config = {}
     if args.eval_config:
@@ -118,10 +118,10 @@ def main():
     print("[2/5] Configuring LoRA adapter...")
     model = FastLanguageModel.get_peft_model(
         model,
-        r=config.get("lora_r", 16),
+        r=config["lora_r"],
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
                         "gate_proj", "up_proj", "down_proj"],
-        lora_alpha=config.get("lora_alpha", 16),
+        lora_alpha=config["lora_alpha"],
         lora_dropout=0,
         bias="none",
         use_gradient_checkpointing="unsloth",
@@ -163,19 +163,19 @@ def main():
         args=SFTConfig(
             max_seq_length=max_seq_length,
             packing=False,
-            per_device_train_batch_size=config.get("batch_size", 2),
-            gradient_accumulation_steps=config.get("gradient_accumulation_steps", 4),
-            warmup_steps=config.get("warmup_steps", 10),
-            num_train_epochs=config.get("num_train_epochs", 3),
-            learning_rate=config.get("learning_rate", 2e-4),
+            per_device_train_batch_size=config["batch_size"],
+            gradient_accumulation_steps=config["gradient_accumulation_steps"],
+            warmup_steps=config["warmup_steps"],
+            num_train_epochs=config["num_train_epochs"],
+            learning_rate=float(config["learning_rate"]),
             fp16=not torch.cuda.is_bf16_supported(),
             bf16=torch.cuda.is_bf16_supported(),
             logging_steps=10,
             eval_strategy="steps",
             eval_steps=20,
-            optim=config.get("optimizer", "adamw_8bit"),
-            weight_decay=config.get("weight_decay", 0.01),
-            lr_scheduler_type=config.get("lr_scheduler_type", "linear"),
+            optim=config["optimizer"],
+            weight_decay=config["weight_decay"],
+            lr_scheduler_type=config["lr_scheduler_type"],
             seed=3407,
             output_dir="outputs",
             report_to="none",
